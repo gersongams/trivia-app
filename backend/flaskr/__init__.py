@@ -8,6 +8,7 @@ from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
 
+
 # Function to paginate the questions
 def paginate_questions(request, selection):
     page = request.args.get('page', 1, type=int)
@@ -49,35 +50,32 @@ def create_app(test_config=None):
     # for all available categories.
     @app.route('/categories')
     def get_categories():
-        try:
-            categories = Category.query.order_by(Category.id).all()
+        categories = Category.query.order_by(Category.id).all()
+        if len(categories) == 0:
+            abort(404)
 
-            return jsonify({
-                'success': True,
-                'categories': format_categories(categories)
-            })
-        except:
-            abort(500)
+        return jsonify({
+            'success': True,
+            'categories': format_categories(categories)
+        })
 
     # Endpoint to handle GET request to get all the questions and the categories
     @app.route('/questions')
     def get_questions():
-        try:
-            questions = Question.query.order_by(Question.id).all()
-            categories = Category.query.order_by(Category.id).all()
-            current_questions = paginate_questions(request, questions)
+        questions = Question.query.order_by(Question.id).all()
+        categories = Category.query.order_by(Category.id).all()
+        current_questions = paginate_questions(request, questions)
 
-            if len(current_questions) == 0:
-                abort(404)
+        if len(current_questions) == 0:
+            abort(404)
 
-            return jsonify({
-                'success': True,
-                'total_questions': len(questions),
-                'categories': format_categories(categories),
-                'questions': current_questions
-            })
-        except:
-            abort(500)
+        return jsonify({
+            'success': True,
+            'total_questions': len(questions),
+            'categories': format_categories(categories),
+            'questions': current_questions
+        })
+
     # Endpoint to DELETE question using a question ID.
     @app.route('/questions/<int:question_id>', methods=['DELETE'])
     def delete_question(question_id):
@@ -87,8 +85,6 @@ def create_app(test_config=None):
                 abort(404)
 
             question.delete()
-            selection = Question.query.order_by(Question.id).all()
-            current_questions = paginate_questions(request, selection)
 
             return jsonify({
                 'success': True,
@@ -96,7 +92,7 @@ def create_app(test_config=None):
                 'total_questions': len(Question.query.all())
             })
         except:
-            abort(500)
+            abort(422)
 
     # endpoint to POST a new question
     @app.route('/questions', methods=['POST'])

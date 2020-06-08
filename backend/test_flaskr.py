@@ -33,7 +33,17 @@ class TriviaTestCase(unittest.TestCase):
             }
         }
 
+        self.bad_quiz_game = {
+            'previous_questions': [6, 7],
+            'quiz_category': {
+                'type': 'Sports',
+                'id': '666'
+            }
+        }
+
         self.search_term = {'searchTerm': 'Burton'}
+
+        self.no_search_term = {'searchTerm': ''}
 
         # binds the app to the current context
         with self.app.app_context():
@@ -51,6 +61,14 @@ class TriviaTestCase(unittest.TestCase):
     Write at least one test for each test for successful operation and for expected errors.
     """
 
+    def test_get_all_categories(self):
+        response = self.client().get('/questions')
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertGreaterEqual(len(data['categories']), 0)
+
     def test_get_paginated_questions(self):
         response = self.client().get('/questions')
         data = json.loads(response.data)
@@ -60,11 +78,11 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data['total_questions'])
         self.assertTrue(len(data['questions']))
 
-    def test_500_sent_requesting_beyond_valid_page(self):
+    def test_404_sent_requesting_beyond_valid_page(self):
         response = self.client().get('/questions?page=100')
         data = json.loads(response.data)
 
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 404)
         self.assertEqual(data['success'], False)
 
     def test_delete_question(self):
@@ -87,6 +105,14 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['deleted'], question_id)
         self.assertTrue(len(questions_before) - len(questions_after) == 1)
         self.assertEqual(question, None)
+
+    def test_404_delete_question(self):
+        question_id = 666
+        response = self.client().delete('/questions/{}'.format(question_id))
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(data['success'], False)
 
     def test_create_new_question(self):
         questions_before = Question.query.all()
@@ -118,6 +144,13 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], True)
         self.assertEqual(len(data['questions']), 1)
 
+    def test_no_term_search_questions(self):
+        response = self.client().post('/questions', json=self.no_search_term)
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(data['success'], False)
+
     def test_get_questions_by_category(self):
         response = self.client().get('/categories/1/questions')
         data = json.loads(response.data)
@@ -143,6 +176,13 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['question']['category'], 6)
         self.assertNotEqual(data['question']['id'], 6)
         self.assertNotEqual(data['question']['id'], 7)
+
+    def test_error_category_quiz_game(self):
+        response = self.client().post('/quizzes', json=self.bad_quiz_game)
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(data['success'], False)
 
 
 # Make the tests conveniently executable
